@@ -62,7 +62,6 @@ export function describePathGate(
       message: formatPathAskPrompt(
         tcc.toolName,
         filePath,
-        tcc.agentName ?? undefined,
       ),
       toolCallId: tcc.toolCallId,
       toolName: tcc.toolName,
@@ -94,11 +93,13 @@ export function formatPathDenyReason(
   return `${subject} is not permitted to access path '${pathValue}' via tool '${toolName}'. Hard stop: this path permission denial is policy-enforced. Do not retry this path, do not attempt a filesystem bypass, and report the block to the user.`;
 }
 
+/**
+ * @deprecated Path prompts no longer include agent-specific wording. `agentName` is no longer used.
+ */
 export function formatPathAskPrompt(
-  toolName: string,
+  _toolName: string,
   pathValue: string,
-  agentName?: string,
+  _agentName?: string,
 ): string {
-  const subject = agentName ? `Agent '${agentName}'` : "Current agent";
-  return `${subject} requested tool '${toolName}' for path '${pathValue}'. Allow this path access?`;
+  return `Path access: ${pathValue}`;
 }

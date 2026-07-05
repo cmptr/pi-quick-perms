@@ -18,28 +18,22 @@ describe("formatExternalDirectoryHardStopHint", () => {
 });
 
 describe("formatExternalDirectoryAskPrompt", () => {
-  test("uses 'Current agent' when no agent name provided", () => {
+  test("formats external directory access message", () => {
     const result = formatExternalDirectoryAskPrompt(
       "read",
       "/etc/passwd",
       "/projects/my-app",
     );
-    expect(result).toContain("Current agent");
-    expect(result).toContain("read");
-    expect(result).toContain("/etc/passwd");
-    expect(result).toContain("/projects/my-app");
+    expect(result).toBe("External directory access: /etc/passwd");
   });
 
-  test("uses agent name when provided", () => {
+  test("formats external directory access for write tool", () => {
     const result = formatExternalDirectoryAskPrompt(
       "write",
       "/tmp/out.txt",
       "/projects/my-app",
-      "my-agent",
     );
-    expect(result).toContain("Agent 'my-agent'");
-    expect(result).toContain("write");
-    expect(result).toContain("/tmp/out.txt");
+    expect(result).toBe("External directory access: /tmp/out.txt");
   });
 });
 
@@ -98,26 +92,33 @@ describe("formatExternalDirectoryUserDeniedReason", () => {
 });
 
 describe("formatBashExternalDirectoryAskPrompt", () => {
-  test("includes command, paths, cwd, and agent name", () => {
+  test("formats bash external directory access message", () => {
     const result = formatBashExternalDirectoryAskPrompt(
       "cat /etc/passwd",
       ["/etc/passwd"],
       "/projects/my-app",
-      "my-agent",
     );
-    expect(result).toContain("Agent 'my-agent'");
-    expect(result).toContain("cat /etc/passwd");
-    expect(result).toContain("/etc/passwd");
-    expect(result).toContain("/projects/my-app");
+    expect(result).toBe("Bash external directory access: cat /etc/passwd");
   });
 
-  test("uses 'Current agent' when no agent name provided", () => {
+  test("formats bash external directory access without agent name", () => {
     const result = formatBashExternalDirectoryAskPrompt(
       "ls /tmp",
       ["/tmp"],
       "/projects/my-app",
     );
-    expect(result).toContain("Current agent");
+    expect(result).toBe("Bash external directory access: ls /tmp");
+  });
+
+  test("formats bash external directory access with multiple external paths", () => {
+    const result = formatBashExternalDirectoryAskPrompt(
+      "diff /etc/hosts /var/log/syslog",
+      ["/etc/hosts", "/var/log/syslog"],
+      "/projects/my-app",
+    );
+    expect(result).toBe(
+      "Bash external directory access: diff /etc/hosts /var/log/syslog",
+    );
   });
 });
 

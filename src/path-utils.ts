@@ -49,12 +49,27 @@ export function isPathWithinDirectory(
 /**
  * Paths that are universally safe and should never trigger external-directory checks.
  * These are OS device files: read returns EOF or process streams, write discards or goes to process streams.
+ *
+ * Includes both Unix-style paths (as returned by normalizePathForComparison on Unix)
+ * and Windows-style paths (as returned by normalizePathForComparison on Windows,
+ * which lowercases and uses backslashes).
+ *
+ * Note: Windows entries assume the current drive letter (typically C:). This
+ * holds because `resolve(cwd, "/dev/null")` always resolves `/dev/null` against
+ * the current drive, regardless of which drive `cwd` is on. Changing the
+ * current drive at runtime (e.g. via `process.chdir("D:\\")`) could produce a
+ * different drive letter, but that scenario is uncommon in practice.
  */
 export const SAFE_SYSTEM_PATHS: ReadonlySet<string> = new Set([
   "/dev/null",
   "/dev/stdin",
   "/dev/stdout",
   "/dev/stderr",
+  // Windows variants produced by normalizePathForComparison on win32 (lowercased)
+  "c:\\dev\\null",
+  "c:\\dev\\stdin",
+  "c:\\dev\\stdout",
+  "c:\\dev\\stderr",
 ]);
 
 /**

@@ -248,21 +248,21 @@ test("Yolo mode only auto-approves ask-state permissions", () => {
   assert.equal(
     shouldAutoApprovePermissionState("ask", {
       ...DEFAULT_EXTENSION_CONFIG,
-      yoloMode: true,
+      mode: "yolo",
     }),
     true,
   );
   assert.equal(
     shouldAutoApprovePermissionState("deny", {
       ...DEFAULT_EXTENSION_CONFIG,
-      yoloMode: true,
+      mode: "yolo",
     }),
     false,
   );
   assert.equal(
     shouldAutoApprovePermissionState("allow", {
       ...DEFAULT_EXTENSION_CONFIG,
-      yoloMode: true,
+      mode: "yolo",
     }),
     false,
   );
@@ -279,7 +279,7 @@ test("Yolo mode resolves ask permissions without UI or delegation forwarding", (
   );
   assert.equal(
     canResolveAskPermissionRequest({
-      config: { ...DEFAULT_EXTENSION_CONFIG, yoloMode: true },
+      config: { ...DEFAULT_EXTENSION_CONFIG, mode: "yolo" },
       hasUI: false,
       isSubagent: false,
     }),
@@ -298,7 +298,7 @@ test("Yolo mode resolves ask permissions without UI or delegation forwarding", (
 test("Permission-system status is only exposed when yolo mode is enabled", () => {
   assert.equal(getPermissionSystemStatus(DEFAULT_EXTENSION_CONFIG), undefined);
   assert.equal(
-    getPermissionSystemStatus({ ...DEFAULT_EXTENSION_CONFIG, yoloMode: true }),
+    getPermissionSystemStatus({ ...DEFAULT_EXTENSION_CONFIG, mode: "yolo" }),
     "yolo",
   );
 });
@@ -1101,7 +1101,7 @@ test("Yolo mode bypasses delegated ask routing when no parent forwarding target 
   assert.equal(targetSessionId, null);
   assert.equal(
     canResolveAskPermissionRequest({
-      config: { ...DEFAULT_EXTENSION_CONFIG, yoloMode: true },
+      config: { ...DEFAULT_EXTENSION_CONFIG, mode: "yolo" },
       hasUI: false,
       isSubagent: true,
     }),
@@ -1110,7 +1110,7 @@ test("Yolo mode bypasses delegated ask routing when no parent forwarding target 
   assert.equal(
     shouldAutoApprovePermissionState("ask", {
       ...DEFAULT_EXTENSION_CONFIG,
-      yoloMode: true,
+      mode: "yolo",
     }),
     true,
   );
@@ -1778,7 +1778,7 @@ permission:
     // Matches agent frontmatter ~/Downloads/* pattern
     const allowed = manager.checkPermission(
       "external_directory",
-      { path: `${homedir()}/Downloads/file.txt` },
+      { path: join(homedir(), "Downloads", "file.txt") },
       "trusted",
     );
     assert.equal(allowed.state, "allow");
@@ -1788,7 +1788,7 @@ permission:
     // Falls through to agent frontmatter catch-all deny
     const denied = manager.checkPermission(
       "external_directory",
-      { path: `${homedir()}/Documents/secret.txt` },
+      { path: join(homedir(), "Documents", "secret.txt") },
       "trusted",
     );
     assert.equal(denied.state, "deny");
@@ -1998,8 +1998,7 @@ test("tool_call prompts for external_directory and then falls through to normal 
 
     assert.deepEqual(result, {});
     assert.equal(harness.prompts.length, 1);
-    assert.match(harness.prompts[0], /external directory access/i);
-    assert.match(harness.prompts[0], /grep/);
+    assert.match(harness.prompts[0], /Permission Required/);
     assert.match(harness.prompts[0], /external-search-root/);
   } finally {
     await harness.cleanup();
@@ -2447,13 +2446,17 @@ test("session approval: bash external directory with 'Yes, for this session' ski
 
   try {
     const externalPath = join(rootDir, "other-project", "src");
+    const bashExternalPath =
+      process.platform === "win32"
+        ? "/" + externalPath.toLowerCase().replace(/^([a-z]):\\/, "$1/").replace(/\\/g, "/")
+        : externalPath;
     // First bash command referencing external path
     const result1 = await runToolCall(
       harness,
       {
         toolName: "bash",
         toolCallId: "bash-session-1",
-        input: { command: `ls ${externalPath}/foo.ts` },
+        input: { command: `ls ${bashExternalPath}/foo.ts` },
       },
       { hasUI: true, selectResponse: "Yes, for this session" },
     );
@@ -2466,7 +2469,7 @@ test("session approval: bash external directory with 'Yes, for this session' ski
       {
         toolName: "bash",
         toolCallId: "bash-session-2",
-        input: { command: `cat ${externalPath}/bar.ts` },
+        input: { command: `cat ${bashExternalPath}/bar.ts` },
       },
       { hasUI: true, selectResponse: "Yes, for this session" },
     );

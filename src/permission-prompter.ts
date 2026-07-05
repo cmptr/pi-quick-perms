@@ -10,6 +10,16 @@ import type {
   RequestPermissionOptions,
 } from "./permission-dialog";
 import { shouldAutoApprovePermissionState } from "./yolo-mode";
+import { shouldAutoApproveForTool } from "./allow-edits-mode";
+import { isPathOutsideWorkingDirectory } from "./path-utils";
+
+function buildPermissionTitle(
+  toolName: string | undefined,
+  agentName: string | null,
+): string {
+  const agentLabel = agentName ? `Agent: ${agentName}` : "Main Agent";
+  return `Permission Required — ${agentLabel}`;
+}
 
 export type PermissionReviewSource = "tool_call" | "skill_input" | "skill_read";
 
@@ -19,6 +29,7 @@ export interface PromptPermissionDetails {
   source: PermissionReviewSource;
   agentName: string | null;
   message: string;
+  surface?: string;
   toolCallId?: string;
   toolName?: string;
   skillName?: string;
@@ -81,16 +92,39 @@ export class PermissionPrompter implements PermissionPrompterApi {
     ctx: ExtensionContext,
     details: PromptPermissionDetails,
   ): Promise<PermissionPromptDecision> {
+    // 1. YOLO mode: auto-approve all ask-state checks (highest priority).
     if (shouldAutoApprovePermissionState("ask", this.deps.getConfig())) {
       this.writeReviewEntry("permission_request.auto_approved", details);
       return { approved: true, state: "approved", autoApproved: true };
     }
 
+    // 2. Allow-edits mode: auto-approve ask-state checks for write/edit only.
+    //    External paths (outside CWD) are never auto-approved — they follow
+    //    the normal config-driven flow so the user sees every modification.
+    const isExternalPath = details.path && ctx.cwd
+      ? isPathOutsideWorkingDirectory(details.path, ctx.cwd)
+      : false;
+    if (
+      shouldAutoApproveForTool(
+        details.surface,
+        "ask",
+        this.deps.getConfig(),
+        isExternalPath,
+      )
+    ) {
+      this.writeReviewEntry("permission_request.auto_approved", details);
+      return { approved: true, state: "approved", autoApproved: true };
+    }
+
+    // 3. Normal prompt flow.
     this.writeReviewEntry("permission_request.waiting", details);
+
+    const title = buildPermissionTitle(details.toolName, details.agentName);
 
     const decision = await confirmPermission(
       ctx,
       details.message,
+      title,
       this.buildForwardingDeps(),
       details.sessionLabel ? { sessionLabel: details.sessionLabel } : undefined,
     );

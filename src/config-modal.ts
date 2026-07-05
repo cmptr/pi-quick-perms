@@ -7,6 +7,7 @@ import { type SettingItem, SettingsList } from "@earendil-works/pi-tui";
 
 import {
   DEFAULT_EXTENSION_CONFIG,
+  type PermissionMode,
   type PermissionSystemExtensionConfig,
 } from "./extension-config";
 import type { Ruleset } from "./rule";
@@ -37,7 +38,7 @@ const COMMAND_ARGUMENTS = [
   {
     value: "reset",
     label: "Reset defaults",
-    description: "Restore default yolo/logging settings and persist them",
+    description: "Restore default mode/logging settings and persist them",
   },
   {
     value: "help",
@@ -48,11 +49,13 @@ const COMMAND_ARGUMENTS = [
 const USAGE_TEXT =
   "Usage: /permission-system [show|path|reset|help] (or run /permission-system with no args to open settings modal)";
 
+const MODE_VALUES = ["default", "allowEdits", "yolo"];
+
 function cloneDefaultConfig(): PermissionSystemExtensionConfig {
   return {
     debugLog: DEFAULT_EXTENSION_CONFIG.debugLog,
     permissionReviewLog: DEFAULT_EXTENSION_CONFIG.permissionReviewLog,
-    yoloMode: DEFAULT_EXTENSION_CONFIG.yoloMode,
+    mode: DEFAULT_EXTENSION_CONFIG.mode,
   };
 }
 
@@ -78,7 +81,7 @@ function summarizeConfig(
   rules?: Ruleset,
 ): string {
   const knobs = [
-    `yoloMode=${toOnOff(config.yoloMode)}`,
+    `mode=${config.mode}`,
     `permissionReviewLog=${toOnOff(config.permissionReviewLog)}`,
     `debugLog=${toOnOff(config.debugLog)}`,
   ].join(", ");
@@ -91,12 +94,12 @@ function buildSettingItems(
 ): SettingItem[] {
   return [
     {
-      id: "yoloMode",
-      label: "YOLO mode",
+      id: "mode",
+      label: "Permission mode",
       description:
-        "Auto-approve ask-state permission checks, including subagent approval forwarding",
-      currentValue: toOnOff(config.yoloMode),
-      values: ON_OFF,
+        "default: interactive | allowEdits: auto-approve write/edit | yolo: auto-approve all",
+      currentValue: config.mode,
+      values: MODE_VALUES,
     },
     {
       id: "permissionReviewLog",
@@ -123,8 +126,8 @@ function applySetting(
   value: string,
 ): PermissionSystemExtensionConfig {
   switch (id) {
-    case "yoloMode":
-      return { ...config, yoloMode: value === "on" };
+    case "mode":
+      return { ...config, mode: value as PermissionMode };
     case "permissionReviewLog":
       return { ...config, permissionReviewLog: value === "on" };
     case "debugLog":
@@ -138,7 +141,7 @@ function syncSettingValues(
   settingsList: SettingsList,
   config: PermissionSystemExtensionConfig,
 ): void {
-  settingsList.updateValue("yoloMode", toOnOff(config.yoloMode));
+  settingsList.updateValue("mode", config.mode);
   settingsList.updateValue(
     "permissionReviewLog",
     toOnOff(config.permissionReviewLog),
@@ -241,7 +244,7 @@ export function registerPermissionSystemCommand(
 ): void {
   pi.registerCommand("permission-system", {
     description:
-      "Configure pi-quick-perms logging and yolo-mode behavior",
+      "Configure pi-quick-perms logging and permission mode",
     getArgumentCompletions,
     handler: async (args, ctx) => {
       if (handleArgs(args, ctx, controller)) {

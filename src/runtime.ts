@@ -150,12 +150,12 @@ export function refreshExtensionConfig(
     warning: warning ?? null,
     debugLog: runtimeConfig.debugLog,
     permissionReviewLog: runtimeConfig.permissionReviewLog,
-    yoloMode: runtimeConfig.yoloMode,
+    mode: runtimeConfig.mode,
   });
 }
 
 /**
- * Save updated runtime knobs (debugLog, permissionReviewLog, yoloMode) to the
+ * Save updated runtime knobs (debugLog, permissionReviewLog, mode) to the
  * global config file, then update runtime.config and sync UI status.
  */
 export function saveExtensionConfig(
@@ -167,12 +167,15 @@ export function saveExtensionConfig(
   const globalPath = getGlobalConfigPath(runtime.agentDir);
 
   const existing = loadUnifiedConfig(globalPath);
-  const merged = {
+  const merged: Record<string, unknown> = {
     ...existing.config,
     debugLog: normalized.debugLog,
     permissionReviewLog: normalized.permissionReviewLog,
-    yoloMode: normalized.yoloMode,
+    mode: normalized.mode,
   };
+  // Remove deprecated boolean fields — mode is the canonical field now.
+  delete merged.yoloMode;
+  delete merged.allowEditsMode;
 
   const tmpPath = `${globalPath}.tmp`;
   try {
@@ -202,7 +205,7 @@ export function saveExtensionConfig(
   runtime.writeDebugLog("config.saved", {
     debugLog: normalized.debugLog,
     permissionReviewLog: normalized.permissionReviewLog,
-    yoloMode: normalized.yoloMode,
+    mode: normalized.mode,
   });
 }
 
